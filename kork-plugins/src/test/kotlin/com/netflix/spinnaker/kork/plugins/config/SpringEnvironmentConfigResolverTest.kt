@@ -139,15 +139,40 @@ class SpringEnvironmentConfigResolverTest : JUnit5Minutests {
             .get { url }.isEqualTo(URL("http://localhost:9000"))
         }
     }
+
+    test("loading repository with empty config") {
+      expectThat(
+        subjectWithEmptyConfig.resolve(
+          RepositoryConfigCoordinates(),
+          object : TypeReference<HashMap<String, PluginRepositoryProperties>>() {}
+        )
+      )
+        .isA<Map<String, PluginRepositoryProperties>>()
+    }
+
+    test("loading plugin with empty config") {
+      expectThat(
+        subjectWithEmptyConfig.resolve(
+          PluginConfigCoordinates("{}","{}"),
+          object : TypeReference<HashMap<String, PluginRepositoryProperties>>() {}
+        )
+      )
+        .isA<Map<String, PluginRepositoryProperties>>()
+    }
   }
 
   private inner class Fixture {
     val environment: ConfigurableEnvironment = mockk(relaxed = true)
     val subject = SpringEnvironmentConfigResolver(environment)
+    val environmentWithEmptyConfig: ConfigurableEnvironment = mockk(relaxed = true)
+    val subjectWithEmptyConfig = SpringEnvironmentConfigResolver(environmentWithEmptyConfig)
 
     init {
       every { environment.propertySources } returns MutablePropertySources().apply {
         addFirst(MapPropertySource("test", properties))
+      }
+      every { environmentWithEmptyConfig.propertySources } returns MutablePropertySources().apply {
+        addFirst(MapPropertySource("test", emptyProperties))
       }
     }
   }
@@ -180,5 +205,10 @@ class SpringEnvironmentConfigResolverTest : JUnit5Minutests {
     "spinnaker.extensibility.extensions.netflix.bar.config.somelist[1].hello" to "two",
     "spinnaker.extensibility.repositories.foo.url" to "http://localhost:9000",
     "spinnaker.extensibility.plugins.netflix.sweet-plugin.config.somestring" to "overridden default"
+  )
+
+  private val emptyProperties = mapOf<String, Any?>(
+    "spinnaker.extensibility.plugins" to mapOf<String,String>(),
+    "spinnaker.extensibility.repositories" to mapOf<String,String>()
   )
 }
